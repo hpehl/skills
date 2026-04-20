@@ -4,19 +4,21 @@ A collection of [Claude Code](https://claude.ai/code) skills — reusable prompt
 
 ## Installation
 
-To install a skill, add this repository to your Claude Code project settings:
-
-```bash
-claude project add-skill https://github.com/hpehl/skills <skill-name>
-```
-
-Or clone the repository and add skills manually:
+Clone the repository:
 
 ```bash
 git clone https://github.com/hpehl/skills.git
 ```
 
-Then reference the skill directory in your Claude Code configuration.
+Then symlink the desired skill into your project or personal skills directory:
+
+```bash
+# Project-level (shared via repo)
+ln -s /path/to/skills/<skill-name>/SKILL.md .claude/skills/<skill-name>/SKILL.md
+
+# Personal/global (all projects)
+ln -s /path/to/skills/<skill-name>/SKILL.md ~/.claude/skills/<skill-name>/SKILL.md
+```
 
 ## Available Skills
 
