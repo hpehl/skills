@@ -7,6 +7,13 @@ description: Add entries to CHANGELOG.md following Keep a Changelog format. Anal
 
 Adds entries to a `CHANGELOG.md` file following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format by analyzing recent git history.
 
+## Tools
+
+- **Bash** — Run `git log`, `git tag`, `git diff`, and `git remote` commands
+- **Read** — Read the existing `CHANGELOG.md`
+- **Edit** — Insert new entries into the changelog (preferred for updates)
+- **Write** — Create `CHANGELOG.md` from scratch when it doesn't exist
+
 ## Trigger
 
 Use this skill when:
@@ -121,15 +128,18 @@ When a commit doesn't clearly map to a type, read the diff to determine the appr
    - If no `[Unreleased]` exists and no version given, create `## [Unreleased]` below the header.
 
 3. **Collect recent changes**:
-   - Run `git log` to get commits since the last tagged/versioned entry.
+   - Determine scope using git tags first: find the most recent tag matching `v*` or semver pattern.
+   - If no tags exist, fall back to parsing the latest `## [x.y.z]` heading in the changelog to identify the last documented version, then use `git log` from that point.
+   - If neither tags nor changelog versions exist, limit to the last 50 commits to avoid excessive analysis.
+   - Run `git log --no-merges` to get commits within the determined scope.
    - Run `git diff` against the last version tag if available.
-   - If no previous version exists, use all commits.
 
 4. **Analyze and categorize**:
    - Parse commit messages for type prefixes (`feat:`, `fix:`, etc.).
    - Read diffs for commits without clear type prefixes.
    - Group related commits into single entries.
    - Skip merge commits and changelog-only commits.
+   - Skip commits that only touch CI config, documentation, or non-user-facing files (e.g., `.github/`, `README.md`, `CHANGELOG.md`) unless they represent meaningful user-visible changes.
 
 5. **Write entries**:
    - Use clear, human-readable language.
@@ -143,7 +153,17 @@ When a commit doesn't clearly map to a type, read the diff to determine the appr
    - Preserve all existing content below.
    - Don't modify existing entries.
 
-7. **Show the user** the entries that were added for review.
+7. **Generate comparison links** (for GitHub-hosted repos):
+   - Run `git remote get-url origin` to detect the repository URL.
+   - Add link references at the bottom of the changelog:
+     ```
+     [Unreleased]: https://github.com/user/repo/compare/v1.0.0...HEAD
+     [1.0.0]: https://github.com/user/repo/compare/v0.9.0...v1.0.0
+     ```
+   - Update existing link references when adding new versions.
+   - Skip this step if the remote is not GitHub-hosted or not available.
+
+8. **Show the user** the new entries and wait for confirmation before writing to the file. For versioned releases, display the full section for review.
 
 ## Examples
 
@@ -212,3 +232,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Overwriting**: Never modify or delete existing changelog entries
 - **Implementation details**: Focus on user-visible changes, not internal refactoring noise
 - **Duplicate entries**: Check existing entries before adding new ones
+- **Unbounded history**: Don't analyze the entire git history when there are no tags — cap at 50 commits
+- **CI/docs noise**: Don't add entries for commits that only change CI config, linting rules, or documentation unless user-visible
