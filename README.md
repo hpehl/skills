@@ -39,4 +39,4 @@ Each skill lives in its own directory and contains:
 
 ## License
 
-MIT
+Apache-2.0
