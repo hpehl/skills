@@ -117,6 +117,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 When a commit doesn't clearly map to a type, read the diff to determine the appropriate section.
 
+### Decision Rules for Ambiguous Cases
+
+- If a commit both adds and removes user-visible functionality, categorize by the primary intent (e.g., `feat: replace old auth with OAuth` is **Added**, not Removed)
+- If a refactor removes user-visible features or endpoints, categorize as **Removed**, not Changed
+- If a performance improvement noticeably changes user experience (e.g., faster page loads), categorize as **Changed**
+- Docs-only commits (`README.md`, `CONTRIBUTING.md`) are skipped unless they document a user-visible change (e.g., correcting a license is **Fixed**)
+- `Initial commit` messages: skip if the changelog is being created retroactively for an established project; include as **Added** if this is genuinely a new project with meaningful initial functionality
+
 ## Execution Steps
 
 1. **Find or create `CHANGELOG.md`** in the repository root.
@@ -159,6 +167,10 @@ When a commit doesn't clearly map to a type, read the diff to determine the appr
      ```
      [Unreleased]: https://github.com/user/repo/compare/v1.0.0...HEAD
      [1.0.0]: https://github.com/user/repo/compare/v0.9.0...v1.0.0
+     ```
+   - If there are no prior tags, use the initial commit hash as the base for the `[Unreleased]` link:
+     ```
+     [Unreleased]: https://github.com/user/repo/compare/abc1234...HEAD
      ```
    - Update existing link references when adding new versions.
    - Skip this step if the remote is not GitHub-hosted or not available.
@@ -225,6 +237,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging framework integration
 ```
 
+## Error Handling
+
+Handle these conditions gracefully:
+- **Not a git repository**: Inform user and stop — do not attempt to create a changelog without git history
+- **Invalid version argument**: Validate that the argument matches semver (`X.Y.Z`); reject with a clear message if not
+- **Malformed changelog**: If the existing file cannot be parsed (missing headers, broken markdown), warn the user and ask before overwriting
+- **Git command failures**: If `git log` or `git diff` fails, report the error and stop rather than producing incomplete entries
+- **No commits in scope**: If scope detection finds zero commits, inform the user — do not add empty sections
+
 ## Anti-Patterns
 
 - **Raw commit messages**: Don't paste commit messages verbatim; rewrite for humans
@@ -234,3 +255,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Duplicate entries**: Check existing entries before adding new ones
 - **Unbounded history**: Don't analyze the entire git history when there are no tags — cap at 50 commits
 - **CI/docs noise**: Don't add entries for commits that only change CI config, linting rules, or documentation unless user-visible
+- **Future tense**: Write entries as completed actions ("Add support for X"), not future plans ("Will add support for X")
+- **Unmarked breaking changes**: Always clearly mark breaking changes (e.g., prefix with "**BREAKING:**")
+- **Stale comparison links**: When adding a new version, update all comparison link references at the bottom of the file
