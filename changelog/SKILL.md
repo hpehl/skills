@@ -1,26 +1,29 @@
 ---
 name: changelog
-description: Add entries to CHANGELOG.md following Keep a Changelog format. Analyzes recent git changes and categorizes them into Added, Changed, Deprecated, Removed, Fixed, and Security sections.
+description: >-
+  This skill should be used when the user asks to "update the changelog",
+  "add changelog entries", "generate release notes", "document recent changes",
+  "write a changelog", "summarize recent changes", "prepare a release",
+  or says /changelog. It adds entries to CHANGELOG.md
+  following Keep a Changelog format by analyzing git history and uncommitted
+  changes, categorizing them into Added, Changed, Deprecated, Removed, Fixed,
+  and Security sections.
+license: Apache-2.0
+metadata:
+  version: "0.1.0"
+  author: "Harald Pehl <harald.pehl@gmail.com>"
 ---
 
 # /changelog — Update Changelog from Recent Changes
 
-Adds entries to a `CHANGELOG.md` file following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format by analyzing recent git history.
+Adds entries to a `CHANGELOG.md` file following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format by analyzing git history and uncommitted changes.
 
 ## Tools
 
-- **Bash** — Run `git log`, `git tag`, `git diff`, and `git remote` commands
+- **Bash** — Run `git log`, `git tag`, `git diff`, `git diff --cached`, `git status`, and `git remote` commands
 - **Read** — Read the existing `CHANGELOG.md`
 - **Edit** — Insert new entries into the changelog (preferred for updates)
 - **Write** — Create `CHANGELOG.md` from scratch when it doesn't exist
-
-## Trigger
-
-Use this skill when:
-- The user asks to update the changelog
-- After a set of commits that should be documented
-- Before a release to capture unreleased changes
-- The user says `/changelog`
 
 ## Arguments
 
@@ -29,32 +32,6 @@ The skill accepts an optional argument string:
 - **No argument**: Analyze commits since the last changelog entry or tag and add entries to `## [Unreleased]`
 - **Version string** (e.g., `1.2.0`): Add entries under `## [1.2.0] - YYYY-MM-DD` using today's date
 - **`unreleased`**: Explicitly target the `## [Unreleased]` section
-
-## Workflow
-
-```
-┌─────────────────────────────────────────────┐
-│  1. LOCATE CHANGELOG                        │
-│     Find CHANGELOG.md in the repo root      │
-│     If missing, create one with header      │
-├─────────────────────────────────────────────┤
-│  2. DETERMINE SCOPE                         │
-│     Find the last version/tag in changelog  │
-│     Collect commits since that point        │
-├─────────────────────────────────────────────┤
-│  3. CATEGORIZE CHANGES                      │
-│     Map each commit to a changelog section  │
-│     Use commit type, message, and diff      │
-├─────────────────────────────────────────────┤
-│  4. GENERATE ENTRIES                        │
-│     Write human-readable descriptions       │
-│     Group under correct section headers     │
-├─────────────────────────────────────────────┤
-│  5. INSERT INTO CHANGELOG                   │
-│     Add to Unreleased or versioned section  │
-│     Preserve existing content               │
-└─────────────────────────────────────────────┘
-```
 
 ## Changelog Format
 
@@ -96,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Rules
 
+- **Section order** is fixed: Added, Changed, Deprecated, Removed, Fixed, Security — never reorder or alphabetize
 - **Dates** use ISO 8601 format: `YYYY-MM-DD`
 - **Latest version** appears first, just below `[Unreleased]`
 - **Only include sections** that have entries (don't add empty sections)
@@ -108,14 +86,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Commit Signal | Section |
 |---------------|---------|
-| `feat:`, new files, new modules, new API endpoints | **Added** |
+| `feat:`, `feat(scope):`, new files, new modules, new API endpoints | **Added** |
 | `refactor:`, `perf:`, behavior changes, API changes | **Changed** |
 | Deprecation notices, `deprecated` in message | **Deprecated** |
 | Deleted files, removed features, `remove` in message | **Removed** |
-| `fix:`, bug fixes, error corrections | **Fixed** |
+| `fix:`, `fix(scope):`, bug fixes, error corrections | **Fixed** |
 | `security:`, vulnerability patches, dependency security updates | **Security** |
+| `feat!:`, `fix!:`, `BREAKING CHANGE:` in footer | **Prefix entry with "BREAKING:"** |
 
-When a commit doesn't clearly map to a type, read the diff to determine the appropriate section.
+When a commit includes a scope (e.g., `feat(api): add endpoint`), use the scope as component context in the entry (e.g., "Add API endpoint"). When a commit doesn't clearly map to a type, read the diff to determine the appropriate section.
 
 ### Decision Rules for Ambiguous Cases
 
@@ -138,9 +117,12 @@ When a commit doesn't clearly map to a type, read the diff to determine the appr
 3. **Collect recent changes**:
    - Determine scope using git tags first: find the most recent tag matching `v*` or semver pattern.
    - If no tags exist, fall back to parsing the latest `## [x.y.z]` heading in the changelog to identify the last documented version, then use `git log` from that point.
-   - If neither tags nor changelog versions exist, limit to the last 50 commits to avoid excessive analysis.
+   - If neither tags nor changelog versions exist, limit to the last 50 commits to avoid excessive analysis. The user can override scope by providing a commit range or tag as argument.
    - Run `git log --no-merges` to get commits within the determined scope.
    - Run `git diff` against the last version tag if available.
+   - Run `git diff --cached` to collect staged but uncommitted changes.
+   - Run `git diff` (no arguments) to collect unstaged changes in the working tree.
+   - Combine committed and uncommitted changes. When the only source is uncommitted changes (no new commits in scope), still generate entries from those changes.
 
 4. **Analyze and categorize**:
    - Parse commit messages for type prefixes (`feat:`, `fix:`, etc.).
@@ -151,8 +133,10 @@ When a commit doesn't clearly map to a type, read the diff to determine the appr
 
 5. **Write entries**:
    - Use clear, human-readable language.
-   - Start each entry with a verb (Add, Change, Fix, Remove, etc.).
+   - Start each entry with an imperative verb matching the section: Add, Change, Deprecate, Remove, Fix, Secure.
    - Include relevant context (what component, what behavior).
+   - Prefix breaking changes with **BREAKING:** (detect via `!` suffix on commit type, e.g. `feat!:`, or `BREAKING CHANGE:` in commit footer).
+   - Order entries within a section by significance: most impactful changes first.
    - Don't include commit hashes or author names.
 
 6. **Insert into the changelog**:
@@ -161,19 +145,20 @@ When a commit doesn't clearly map to a type, read the diff to determine the appr
    - Preserve all existing content below.
    - Don't modify existing entries.
 
-7. **Generate comparison links** (for GitHub-hosted repos):
+7. **Generate comparison links**:
    - Run `git remote get-url origin` to detect the repository URL.
+   - Detect the hosting platform from the remote URL hostname and generate platform-appropriate links:
+     - **GitHub** (`github.com`): `https://github.com/user/repo/compare/v1.0.0...HEAD`
+     - **GitLab** (`gitlab.com` or self-hosted): `https://gitlab.com/user/repo/-/compare/v1.0.0...HEAD`
+     - **Bitbucket** (`bitbucket.org`): `https://bitbucket.org/user/repo/branches/compare/HEAD..v1.0.0`
    - Add link references at the bottom of the changelog:
      ```
      [Unreleased]: https://github.com/user/repo/compare/v1.0.0...HEAD
      [1.0.0]: https://github.com/user/repo/compare/v0.9.0...v1.0.0
      ```
-   - If there are no prior tags, use the initial commit hash as the base for the `[Unreleased]` link:
-     ```
-     [Unreleased]: https://github.com/user/repo/compare/abc1234...HEAD
-     ```
+   - If there are no prior tags, use the initial commit hash as the base for the `[Unreleased]` link.
    - Update existing link references when adding new versions.
-   - Skip this step if the remote is not GitHub-hosted or not available.
+   - Skip this step if the remote URL cannot be parsed or is not available.
 
 8. **Show the user** the new entries and wait for confirmation before writing to the file. For versioned releases, display the full section for review.
 
@@ -244,7 +229,7 @@ Handle these conditions gracefully:
 - **Invalid version argument**: Validate that the argument matches semver (`X.Y.Z`); reject with a clear message if not
 - **Malformed changelog**: If the existing file cannot be parsed (missing headers, broken markdown), warn the user and ask before overwriting
 - **Git command failures**: If `git log` or `git diff` fails, report the error and stop rather than producing incomplete entries
-- **No commits in scope**: If scope detection finds zero commits, inform the user — do not add empty sections
+- **No changes in scope**: If scope detection finds zero commits and no uncommitted changes, inform the user — do not add empty sections
 
 ## Anti-Patterns
 
