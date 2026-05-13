@@ -20,12 +20,6 @@ ln -s /path/to/skills/<skill-name>/SKILL.md .claude/skills/<skill-name>/SKILL.md
 ln -s /path/to/skills/<skill-name>/SKILL.md ~/.claude/skills/<skill-name>/SKILL.md
 ```
 
-## Available Skills
-
-| Skill | Description |
-|-------|-------------|
-| [changelog](changelog/SKILL.md) | Add entries to CHANGELOG.md following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Analyzes recent git changes and categorizes them into Added, Changed, Deprecated, Removed, Fixed, and Security sections. |
-
 ## Skill Structure
 
 Each skill lives in its own directory and contains:
