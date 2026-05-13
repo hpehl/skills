@@ -10,15 +10,17 @@ Clone the repository:
 git clone https://github.com/hpehl/skills.git
 ```
 
-Then symlink the desired skill into your project or personal skills directory:
+Then symlink the desired skill directory into your project or personal skills directory:
 
 ```bash
 # Project-level (shared via repo)
-ln -s /path/to/skills/<skill-name>/SKILL.md .claude/skills/<skill-name>/SKILL.md
+ln -s /path/to/skills/<skill-name> .claude/skills/<skill-name>
 
 # Personal/global (all projects)
-ln -s /path/to/skills/<skill-name>/SKILL.md ~/.claude/skills/<skill-name>/SKILL.md
+ln -s /path/to/skills/<skill-name> ~/.claude/skills/<skill-name>
 ```
+
+Symlink the entire directory (not just `SKILL.md`) so that optional files like `.claude/settings.local.json` are included.
 
 ## Skill Structure
 
