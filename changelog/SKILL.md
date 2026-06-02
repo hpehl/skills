@@ -4,10 +4,13 @@ description: >-
   This skill should be used when the user asks to "update the changelog",
   "add changelog entries", "generate release notes", "document recent changes",
   "write a changelog", "summarize recent changes", "prepare a release",
+  "clean up the changelog", "consolidate changelog entries", "tidy the changelog",
+  "create a changelog", "draft release notes",
   or says /changelog. It adds entries to CHANGELOG.md
   following Keep a Changelog format by analyzing git history and uncommitted
   changes, categorizing them into Added, Changed, Deprecated, Removed, Fixed,
-  and Security sections.
+  and Security sections. It can also consolidate existing entries to remove
+  duplicates and superseded items.
 license: Apache-2.0
 metadata:
   version: "0.1.0"
@@ -32,6 +35,7 @@ The skill accepts an optional argument string:
 - **No argument**: Analyze commits since the last changelog entry or tag and add entries to `## [Unreleased]`
 - **Version string** (e.g., `1.2.0`): Add entries under `## [1.2.0] - YYYY-MM-DD` using today's date
 - **`unreleased`**: Explicitly target the `## [Unreleased]` section
+- **`consolidate`**: Run housekeeping on the existing changelog — merge duplicates, remove stale entries superseded by newer ones, and tighten wording (see [Housekeeping](#housekeeping))
 
 ## Changelog Format
 
@@ -101,7 +105,7 @@ When a commit includes a scope (e.g., `feat(api): add endpoint`), use the scope 
 - If a commit both adds and removes user-visible functionality, categorize by the primary intent (e.g., `feat: replace old auth with OAuth` is **Added**, not Removed)
 - If a refactor removes user-visible features or endpoints, categorize as **Removed**, not Changed
 - If a performance improvement noticeably changes user experience (e.g., faster page loads), categorize as **Changed**
-- Docs-only commits (`README.md`, `CONTRIBUTING.md`) are skipped unless they document a user-visible change (e.g., correcting a license is **Fixed**)
+- Skip docs-only commits (`README.md`, `CONTRIBUTING.md`) unless they document a user-visible change (e.g., correcting a license is **Fixed**)
 - `Initial commit` messages: skip if the changelog is being created retroactively for an established project; include as **Added** if this is genuinely a new project with meaningful initial functionality
 
 ## Execution Steps
@@ -160,7 +164,26 @@ When a commit includes a scope (e.g., `feat(api): add endpoint`), use the scope 
    - Update existing link references when adding new versions.
    - Skip this step if the remote URL cannot be parsed or is not available.
 
-8. **Show the user** the new entries and wait for confirmation before writing to the file. For versioned releases, display the full section for review.
+8. **Write to the changelog** — auto-apply by default:
+   - Apply the changes directly using Edit (or Write for new files) without asking for confirmation.
+   - **Exception — malformed changelog**: If the existing file cannot be parsed (missing headers, broken markdown structure, unparseable version sections), stop and use **AskUserQuestion** to show the user what's wrong and ask how to proceed before overwriting.
+
+## Housekeeping
+
+When invoked with `consolidate` (or when the user asks to "clean up the changelog", "consolidate entries", "tidy the changelog"), run a housekeeping pass on the existing `CHANGELOG.md`:
+
+1. **Scan for duplicates**: Find entries across sections that describe the same change in different words (e.g., "Add retry logic to API client" and "Add automatic retries for failed API requests"). Merge them into the strongest single entry, keeping it in the most appropriate section.
+
+2. **Detect superseded entries**: When a later entry makes an earlier one obsolete, remove the stale one. Common patterns:
+   - A feature was added, then rewritten — keep only the rewrite (or the final state).
+   - A bug was fixed, then the fix was reverted and re-fixed differently — keep only the final fix.
+   - A deprecation notice followed by actual removal — keep the removal, drop the deprecation (unless they're in different version sections).
+
+3. **Tighten wording**: Shorten verbose entries without losing meaning. Each entry should be one concise line.
+
+4. **Preserve version boundaries**: Never move entries between versioned sections (`## [x.y.z]`). Housekeeping within `## [Unreleased]` is unrestricted. Within versioned sections, only merge duplicates and tighten wording — do not delete entries.
+
+5. **Apply changes**: Apply the consolidated entries directly using Edit without asking for confirmation. The same malformed-changelog exception from step 8 applies here.
 
 ## Examples
 
@@ -227,7 +250,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Handle these conditions gracefully:
 - **Not a git repository**: Inform user and stop — do not attempt to create a changelog without git history
 - **Invalid version argument**: Validate that the argument matches semver (`X.Y.Z`); reject with a clear message if not
-- **Malformed changelog**: If the existing file cannot be parsed (missing headers, broken markdown), warn the user and ask before overwriting
+- **Malformed changelog**: If the existing file cannot be parsed (missing headers, broken markdown structure, unparseable version sections), stop and use **AskUserQuestion** to show the user what's wrong and ask how to proceed before overwriting
 - **Git command failures**: If `git log` or `git diff` fails, report the error and stop rather than producing incomplete entries
 - **No changes in scope**: If scope detection finds zero commits and no uncommitted changes, inform the user — do not add empty sections
 
@@ -235,7 +258,7 @@ Handle these conditions gracefully:
 
 - **Raw commit messages**: Don't paste commit messages verbatim; rewrite for humans
 - **Empty sections**: Don't include section headers with no entries
-- **Overwriting**: Never modify or delete existing changelog entries
+- **Overwriting**: Never modify or delete existing changelog entries during normal operation (adding new entries). The only exception is `consolidate` mode, which explicitly merges and cleans up entries
 - **Implementation details**: Focus on user-visible changes, not internal refactoring noise
 - **Duplicate entries**: Check existing entries before adding new ones
 - **Unbounded history**: Don't analyze the entire git history when there are no tags — cap at 50 commits
@@ -243,3 +266,5 @@ Handle these conditions gracefully:
 - **Future tense**: Write entries as completed actions ("Add support for X"), not future plans ("Will add support for X")
 - **Unmarked breaking changes**: Always clearly mark breaking changes (e.g., prefix with "**BREAKING:**")
 - **Stale comparison links**: When adding a new version, update all comparison link references at the bottom of the file
+- **Unnecessary confirmation prompts**: Don't ask for approval before writing — auto-apply is the default. Only stop and ask when the existing changelog is malformed and can't be parsed safely
+- **Cross-version consolidation**: During housekeeping, never move or delete entries from versioned release sections — only consolidate within `[Unreleased]`
