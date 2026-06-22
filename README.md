@@ -22,6 +22,13 @@ ln -s /path/to/skills/<skill-name> ~/.claude/skills/<skill-name>
 
 Symlink the entire directory (not just `SKILL.md`) so that optional files like `.claude/settings.local.json` are included.
 
+## Available Skills
+
+| Skill | Description |
+|-------|-------------|
+| [changelog](changelog/) | Update `CHANGELOG.md` following Keep a Changelog format by analyzing git history and uncommitted changes |
+| [chezmoi](chezmoi/) | Dotfile management with chezmoi — detect drift in managed files, discover new config worth tracking, and health-check your setup. Supports 1Password template scaffolding for sensitive files. |
+
 ## Skill Structure
 
 Each skill lives in its own directory and contains:
