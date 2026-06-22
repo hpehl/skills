@@ -4,7 +4,7 @@ description: >-
   This skill should be used when the user asks to "check dotfiles",
   "update dotfiles", "chezmoi status", "find new config", "discover config",
   "dotfile health check", "chezmoi doctor", "what config files changed",
-  "add config to chezmoi", "sync dotfiles",
+  "add config to chezmoi", "sync dotfiles", "manage dotfiles", "dotfile drift",
   or says /chezmoi. It detects drift in managed dotfiles, discovers
   unmanaged config files worth tracking, and runs health checks on the
   chezmoi setup. Supports 1Password template scaffolding for sensitive files.
@@ -20,9 +20,9 @@ Operational dotfile management: detect drift, discover new config, and health-ch
 
 ## Tools
 
-- **Bash** — Run `chezmoi status`, `chezmoi diff`, `chezmoi add`, `chezmoi git --`, `chezmoi doctor`, `chezmoi verify`, `op account list`, and the `filter-unmanaged.sh` helper script
+- **Bash** — Run `chezmoi status`, `chezmoi diff`, `chezmoi add`, `chezmoi git --`, `chezmoi doctor`, `chezmoi verify`, `op account list`, and the `scripts/filter-unmanaged.sh` helper script
 - **Read** — Read file content for sensitivity scanning, read exclusion YAML files
-- **Edit** — Update `excludes.local.yaml` when user excludes a file
+- **Edit** — Update `references/excludes.local.yaml` when user excludes a file
 - **Write** — Create `.tmpl` files in chezmoi source directory for sensitive file templates
 - **AskUserQuestion** — Ask which subcommand to run, which files to add/exclude/skip, how to handle sensitive files
 
@@ -185,11 +185,11 @@ For multiple files added together, batch them into a single commit with a summar
 
 ### Execution Steps
 
-1. **Locate the skill directory**: The `filter-unmanaged.sh` script, `excludes.yaml`, and `excludes.local.yaml` are in the same directory as this SKILL.md file. Determine the skill directory path from the skill invocation context.
+1. **Locate the skill directory**: The skill directory is the parent directory of this SKILL.md file. It contains `scripts/filter-unmanaged.sh`, `references/excludes.yaml`, and `references/excludes.local.yaml`.
 
 2. **Run the filter script** via Bash:
    ```bash
-   <skill-dir>/filter-unmanaged.sh <skill-dir>/excludes.yaml <skill-dir>/excludes.local.yaml
+   <skill-dir>/scripts/filter-unmanaged.sh <skill-dir>/references/excludes.yaml <skill-dir>/references/excludes.local.yaml
    ```
    Capture the output — one unmanaged file path per line (relative to home directory).
 
@@ -201,7 +201,7 @@ For multiple files added together, batch them into a single commit with a summar
 
 6. **For each finding**, use **AskUserQuestion** to offer:
    - **Add** — triggers the shared Add Workflow (sensitivity scan on full file content → handling → git pipeline)
-   - **Exclude** — append the file's path pattern to `excludes.local.yaml` using Edit (add to the `patterns:` list). If the file is in a directory with other excluded siblings, suggest excluding the parent directory pattern (e.g., `.some-app/*` instead of `.some-app/cache.json`).
+   - **Exclude** — append the file's path pattern to `references/excludes.local.yaml` using Edit (add to the `patterns:` list). If the file is in a directory with other excluded siblings, suggest excluding the parent directory pattern (e.g., `.some-app/*` instead of `.some-app/cache.json`).
    - **Skip** — move to the next finding
 
 7. **Batch adds**: Collect all files the user chose to add, then run the shared Add Workflow for the batch. Commit all together with a summary message.
@@ -262,7 +262,8 @@ Handle these conditions gracefully:
 - **chezmoi not installed**: Check with `command -v chezmoi` before any operation. Report and stop.
 - **Not initialized**: If `chezmoi status` fails, suggest `chezmoi init`.
 - **1Password CLI not installed**: If `op` is not found, skip 1Password checks in doctor and skip sensitivity Option 1/2 in the Add Workflow (fall back to standard add with a warning).
-- **filter-unmanaged.sh not found**: If the script can't be located, report the error and suggest reinstalling the skill.
+- **filter-unmanaged.sh not found**: If `scripts/filter-unmanaged.sh` can't be located, report the error and suggest reinstalling the skill.
+- **Skill directory is read-only**: If Edit fails on `references/excludes.local.yaml`, copy it to `~/.config/chezmoi/excludes.local.yaml` and use that path for all future writes. Update the filter script invocation to pass the new path as the second argument.
 - **yq not installed**: The filter script handles this internally (grep fallback). No action needed.
 - **Git push fails**: Report the error. Common causes: no remote configured, auth failure. Don't retry.
 - **Empty chezmoi source directory**: If `chezmoi source-path` fails, suggest `chezmoi init`.
@@ -272,7 +273,7 @@ Handle these conditions gracefully:
 - **Never read secrets into conversation output**: When showing detected secrets during sensitivity scan, always mask them (show first 4 and last 4 characters only, e.g., `ghp_****...x7Qm`)
 - **Never run `chezmoi add --encrypt`**: The user uses 1Password templates, not file encryption
 - **Never use raw `cd` + `git`**: Always use `chezmoi git --` for git operations
-- **Never modify `excludes.yaml`**: Only `excludes.local.yaml` gets modified at runtime (user's personal exclusions)
+- **Never modify `references/excludes.yaml`**: Only `references/excludes.local.yaml` gets modified at runtime (user's personal exclusions). If the skill directory is read-only (e.g., installed as a plugin), copy `references/excludes.local.yaml` to `~/.config/chezmoi/excludes.local.yaml` on first write and use that path going forward.
 - **Never auto-push**: Always confirm with the user before running `chezmoi git -- push`
 - **Never create directories manually**: Let chezmoi handle directory creation in the source state
 - **Never skip the sensitivity scan**: Even for files that don't trigger path-based heuristics, always scan content before adding
