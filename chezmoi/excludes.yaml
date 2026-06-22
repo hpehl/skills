@@ -1,0 +1,50 @@
+patterns:
+  # System / OS
+  - ".DS_Store"
+  - ".CFUserTextEncoding"
+  - ".Trash"
+  - ".Trash/*"
+
+  # Caches and generated files
+  - ".cache"
+  - ".cache/*"
+  - "*/Cache/*"
+  - "*/CacheStorage/*"
+  - "*/GPUCache/*"
+  - "*/ShaderCache/*"
+  - "*/node_modules/*"
+  - "*/.gradle/*"
+
+  # Application state (not config)
+  - ".bash_history"
+  - ".lesshst"
+  - ".python_history"
+  - ".viminfo"
+  - "*.boltdb"
+
+  # Package manager internals
+  - ".cargo/bin"
+  - ".cargo/bin/*"
+  - ".cargo/registry"
+  - ".cargo/registry/*"
+  - ".cargo/.crates.toml"
+  - ".cargo/.crates2.json"
+  - ".cargo/.package-cache"
+  - ".cargo/.package-cache-mutate"
+  - ".cargo/.rustc_info.json"
+  - ".cargo/.global-cache"
+  - ".cargo/advisory-db"
+  - ".cargo/advisory-db.*"
+
+  # IDE and editor state
+  - ".idea/*"
+  - ".vscode/*"
+
+  # Browser and app data
+  - ".mozilla/*"
+  - "Library/*"
+
+  # Build artifacts
+  - "*/target/*"
+  - "*/build/*"
+  - "*/dist/*"
